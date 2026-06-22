@@ -1,0 +1,10 @@
+base_url = "https://3b.nz"
+generate_feeds = true
+author = "3bnz"
+
+[markdown]
+insert_anchor_links = "heading"
+
+[markdown.highlighting]
+light_theme = "github-light"
+dark_theme = "github-dark"

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link rel="preload" href="/fonts/libertinus_display.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+		<link rel="preload" href="/fonts/commit_mono.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+		<link rel="alternate" type="application/rss+xml" href="/atom.xml">
+		<link rel="icon" type="image/x-icon" href="/assets/beans.svg">
+		<link rel="stylesheet" href="/style.css">
+		<title>{% block title %}{% endblock %}</title>
+	</head>
+	<body>
+		<div style="text-align: center;">
+			<a href="/" class="nav-icon">
+				{{ load_data(path="static/assets/beans.svg") | safe }}
+				Home
+			</a>
+			|
+			<a href="https://github.com/3bnz" class="nav-icon">
+				{{ load_data(path="static/assets/github.svg") | safe }}
+				Github
+			</a>
+			|
+			<a href="/atom.xml" class="nav-icon">
+				{{ load_data(path="static/assets/feed.svg") | safe }}
+				Feed
+			</a>
+			|
+			<a href="/contact" class="nav-icon">
+				{{ load_data(path="static/assets/contact.svg") | safe }}
+				About
+			</a>
+		</div>
+		{% block content %}{% endblock %}
+	</body>
+</html>

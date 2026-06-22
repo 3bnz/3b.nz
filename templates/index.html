@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ section.title }}
+{% endblock %}
+
+{% block content %}
+<img src="/assets/beans.png" alt="Beans" class="hero">
+{% set posts = get_section(path="posts/_index.md") %}
+{% for page in posts.pages %}
+<a href="{{ page.permalink }}">
+	<h2>{{ page.title }}</h2>
+	<p class="description">{{ page.description }}</p>
+	{% if page.date %}
+	<p class="date">{{ page.date | date(format="%d %b %Y") }}</p>
+	{% endif %}
+	<br>
+</a>
+{% endfor %}
+{% endblock content %}
