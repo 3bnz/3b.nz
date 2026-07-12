@@ -4,6 +4,7 @@ author = "3bnz"
 
 [markdown]
 insert_anchor_links = "heading"
+bottom_footnotes = true
 
 [markdown.highlighting]
 light_theme = "github-light"

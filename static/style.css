@@ -157,11 +157,6 @@ pre {
 	border-radius: 99px;?
 }
 
-span {
-  filter: brightness(0.9);
-}
-
-
 pre > code {
 	border: var(--border);
 	border-radius: var(--large);
@@ -170,6 +165,10 @@ pre > code {
 	line-height: 140%;
 	overflow-x: auto;
 	padding: var(--large);
+}
+
+math {
+	font-family: serif;
 }
 
 @media only screen and (max-width: 480px) {

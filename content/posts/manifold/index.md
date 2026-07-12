@@ -1,65 +1,131 @@
 ---
-title: I really like Manifold library.
+title: I really like the Manifold library.
 date: 2026-04-28
-description: Choosing a better stack for parametric 3d modeling
+description: A d.i.y. software stack for parametric 3d modeling
 ---
 
-Is it me or is it just a fantasy? With `let joke = 67;`
+![Geometry Tree](./tree.webp)
 
-```rust
-let foo: 5;
+_Image showing three main
+[CSG](https://en.wikipedia.org/wiki/Constructive_solid_geometry) boolean
+operations_ - `union`, `intersection` and `subtraction`
 
-fn add(a: f64, b: f64) -> f64 {
-  a + b
+## Status Quo
+
+I've been an [OpenSCAD](https://openscad.org/) user for quite some time now.
+It's _the_ pragmatic choice for parametric 3D modeling and my go-to solution for
+mechanical parts.
+
+The tool comes with a `script -> geometry` compiler which uses a dedicated
+[DSL](https://en.wikipedia.org/wiki/Domain-specific_language). The language
+(while having C inspired syntax) is functional - constants only, pure functions,
+etc. In addition, to produce any geometry, one must use its dedicated `module`
+system:
+
+```scad
+// A `module` is a block,
+// which evaluates (implicitly returns?) some geometry
+module highlight() {
+    color("red") children();
 }
+
+// Modules can be chained
+// leading to haskell style right-to-left syntax
+scale(2.2) highlight() sphere(10.0);
 ```
 
-Let's quote an author:
+While OpenSCAD does have it's quirks it generally gets the job done and is
+widely supported.
 
-> Who is right here **bold** _italic_
+## However..
 
-## Subtitle
+There are some things I don't like about it. Especially wen it comes to building
+larger, more complex models or using some of its (also not so small) third party
+libraries:
 
-This is a table:
+- Since it's weakly typed, the errors need to be checked at runtime using
+  [test functions](https://en.wikibooks.org/wiki/OpenSCAD_User_Manual/Type_Test_Functions) -
+  `is_num`, `is_list` etc. Many of these errors could be inferred at
+  compile-time or via static analysis.
+- I wish the order of operation order would be left-to-right i.e.
+  `cube(..) translate(..)` instead of `translate(...) cube(..)` While the first
+  option might feel more "english" there are many benefits to chaining
+  operations after the object. You can read more about "pipelining" here:
+  [Pipelining might be my favorite programming language feature](https://herecomesthemoon.net/2025/04/pipelining/).
+- While still in active development, the last official release was over _five_
+  years ago. So to get latest fixed and improvements one must use development
+  snapshots[^1].
 
-| Product ID | Item Name           | Price  | Stock Status |
-| :--------- | :------------------ | :----- | :----------- |
-| #1024      | Wireless `Mouse`    | $25.00 | In Stock     |
-| #1025      | Mechanical Keyboard | $89.99 | Low Stock    |
-| #1026      | USB-C Cable (1m)    | $9.50  | Out of Stock |
+And _boy_ there have been improvements - after switching to a developer snapshot
+compilation of my models went from tens of seconds to pretty much instantaneous!
+Like..huh? How is such improvement even possible?
 
-## Paragraph
+## Manifold
 
-If you are designing a mobile app or website and want to use Figma’s native
-Variables feature to automatically flip your UI mockups from light to dark mode
-with a single click, this is locked behind a paid plan.
+A library by [Emmett Lalish](https://elalish.blogspot.com/) that's responsible
+for turning solids into a triangle mesh and supports
+[3mf](https://github.com/3MFConsortium/spec_core) export. As opposed to STL,
+this file format **shares vertices between adjacent triangles**[^2] which avoids
+broken, disjointed meshes and subsequent fixing. i.e. manifold always produces
+_"watertight"_ models with exact known volume.
 
-## SPF
+Additionally it has broad set of
+[bindings](https://github.com/elalish/manifold#bindings--packages) which means
+we can use well supported general purpose language with mature tooling to
+generate our geometry.
 
-sender policy framework
+Since the library can be compiled to wasm - there even is a reference web
+interface [ManifoldCAD](https://manifoldcad.org/). It's a great demo, but I
+would like to create local setup, which can be launched from CLI, use my
+`$EDITOR` of choice and have version control with git.
 
-> "Is this server allowed to send for this domain?"
+## Local Setup
 
-- Lists valid send servers for the domain
-- Format: `v=spf1 [mechanisms] [qualifier]~all`
+![webp](./screen.webp)
 
-## DKIM
+Choosing among the many available languages comes down to a few constraints
+imposed by our local setup:
 
-domain keys identified mail
+1. The language must be interpreted and dynamic, so the library itself doesn't
+   need to be reloaded on every model change - only the geometry code does.
+2. The wasm target is currently single-threaded, and available memory is limited
+   by the V8 engine. Id like to run it "bare metal"
 
-> Is this email authentic and unmodified?
+Together, these constraints basically leaves us with Python.
 
-- Contains sending servers public key, which is used to sign mails
-- Can be pointed to via CNAME record
-- Format: `v=DKIM1; k=rsa; p=[base_64_public_key]`
+## Bonus - Auto tolerance
 
-## DMARC
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <msub>
+    <mi>n</mi>
+  </msub>
+  <mo>=</mo>
+  <mrow>
+    <mo>⌈</mo>
+    <mfrac>
+      <mi>π</mi>
+      <mrow>
+        <mi>arccos</mi>
+        <mrow>
+          <mo>(</mo>
+          <mn>1</mn>
+          <mo>−</mo>
+          <mfrac>
+            <mi>t</mi>
+            <mi>r</mi>
+          </mfrac>
+          <mo>)</mo>
+        </mrow>
+      </mrow>
+    </mfrac>
+    <mo>⌉</mo>
+  </mrow>
+</math>
 
-domain-based message authentication reporting and conformance
+---
 
-> What to do, if it fails?
+[^1]: According to homebrew statistics around 25% of users are running nightly
+    instead of release version of OpenSCAD
 
-- Contains policy for handling failures
-- Format: `v=DMARC1; p=[none|quarantine|reject>; rua=mailto:abuse@example.com`
-- Forbid `user@subdomain.example.com` for _SPF_ and _DKIM_ by setting
-  `adkim=[s|r]; aspf=[s|r]` to strict `s`. Default is `r` - relaxed
+[^2]: In [3mf](https://github.com/3MFConsortium/spec_core) vertex data is stored
+    in a separate array. Then - mesh is created by indexing into it.
