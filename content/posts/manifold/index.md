@@ -8,7 +8,7 @@ description: A d.i.y. software stack for parametric 3d modeling
 
 _Image showing three main
 [CSG](https://en.wikipedia.org/wiki/Constructive_solid_geometry) boolean
-operations_ - `union`, `intersection` and `subtraction`
+operations_
 
 ## Status Quo
 
@@ -19,7 +19,7 @@ mechanical parts.
 The tool comes with a `script -> geometry` compiler which uses a dedicated
 [DSL](https://en.wikipedia.org/wiki/Domain-specific_language). The language
 (while having C inspired syntax) is functional - constants only, pure functions,
-etc. In addition, to produce any geometry, one must use its dedicated `module`
+etc. Additionally, to produce any geometry, one must use its dedicated `module`
 system:
 
 ```scad
@@ -39,9 +39,9 @@ widely supported.
 
 ## However..
 
-There are some things I don't like about it. Especially wen it comes to building
-larger, more complex models or using some of its (also not so small) third party
-libraries:
+There are some things I don't like about it. Especially when it comes to
+building larger, more complex models or using some of its (also not so small)
+third party libraries:
 
 - Since it's weakly typed, the errors need to be checked at runtime using
   [test functions](https://en.wikibooks.org/wiki/OpenSCAD_User_Manual/Type_Test_Functions) -
@@ -66,8 +66,9 @@ A library by [Emmett Lalish](https://elalish.blogspot.com/) that's responsible
 for turning solids into a triangle mesh and supports
 [3mf](https://github.com/3MFConsortium/spec_core) export. As opposed to STL,
 this file format **shares vertices between adjacent triangles**[^2] which avoids
-broken, disjointed meshes and subsequent fixing. i.e. manifold always produces
-_"watertight"_ models with exact known volume.
+broken, disjointed meshes and subsequent
+[fixing](https://blog.prusa3d.com/repair-3d-models-errors_7529/). i.e. manifold
+always produces _"watertight"_ models with exact known volume.
 
 Additionally it has broad set of
 [bindings](https://github.com/elalish/manifold#bindings--packages) which means
@@ -87,11 +88,47 @@ Choosing among the many available languages comes down to a few constraints
 imposed by our local setup:
 
 1. The language must be interpreted and dynamic, so the library itself doesn't
-   need to be reloaded on every model change - only the geometry code does.
+   need to be loaded in memory on every model change - only the geometry code
+   does.
 2. The wasm target is currently single-threaded, and available memory is limited
    by the V8 engine. Id like to run it "bare metal"
 
-Together, these constraints basically leaves us with Python.
+Together, these constraints basically leaves us with Python. Due to it's use in
+robotics there are also many 3d viewers available. I chose
+[viser](https://viser.studio/main/) since it has good rendering of
+semi-transparent models.
+
+Additionally, after writing some hacking together some helper methods to add
+some syntactic sugar here's what it looks like:
+
+```python
+from helpers import *
+
+offset = 18
+batt_rise = 3
+batt_x = 15
+batt_y = 7
+wall = 2
+
+def move_batt(m: Manifold) -> Manifold:
+    return m.rx(90).ty(offset + 4).tz(batt_y / 2 + batt_rise)
+
+def move_clone_studs(m: Manifold) -> Manifold:
+    return union(*(m.tx(offset).rz(i * 90) for i in range(4)))
+
+manifold = union(
+    move_clone_studs(cylinder(3, batt_rise)),
+    move_batt(round_rect(wall, batt_x + wall, batt_y + wall, 30)),
+    cube(batt_x + 2, 22, 2).ty(11),
+    round_rect(3, batt_x, 8, batt_rise).ty(2.5 - offset),
+).hull() - union(
+    move_clone_studs(hexagon(2, batt_y).tz(batt_rise - 1.5)),
+    move_clone_studs(cylinder(0.8, 5)),
+    move_batt(round_rect(1, batt_x, batt_y, 99)),
+    cube(7, 4, 99).ty(5 - offset), # UART Port
+    round_rect(1, batt_x + 2, 24, batt_rise - 0.4).ty(3),
+)
+```
 
 ## Bonus - Auto tolerance
 
