@@ -4,9 +4,7 @@ date: 2026-04-28
 description: A d.i.y. software stack for parametric 3d modeling
 ---
 
-![Geometry Tree](./tree.webp)
-
-_Image showing three main
+![Geometry Tree](./tree.webp) _Image showing three main
 [CSG](https://en.wikipedia.org/wiki/Constructive_solid_geometry) boolean
 operations_
 
@@ -93,71 +91,49 @@ imposed by our local setup:
 2. The wasm target is currently single-threaded, and available memory is limited
    by the V8 engine. Id like to run it "bare metal"
 
-Together, these constraints basically leaves us with Python. Due to it's use in
-robotics there are also many 3d viewers available. I chose
+Together, these constraints basically leaves us with Python. Luckily due to it's
+use in robotics and ml-vision there are also many 3d viewers available. I chose
 [viser](https://viser.studio/main/) since it has good rendering of
-semi-transparent models.
+semi-transparent models and updates are fast. After spending some time wiring
+convenience wrappers, implementing hot-reload and file export we are left
+syntax, which is quite a bit more expressive than `scad` language.
 
-Additionally, after writing some hacking together some helper methods to add
-some syntactic sugar here's what it looks like:
+If you'd like to try this out - there is a
+[repository](https://github.com/3bnz/manifold)
+
+## Bonus - Setting Tolerances
+
+![desmos](desmos.webp) _Given an n sided polygon inscribed in circle - this
+formula calculates the required number of segments that satisfy some maximum
+tolerance ε. Screenshot from
+[desmos](https://www.desmos.com/calculator/johoyslpy2) playground_
+
+Since manifold works on
+[triangulated meshes](https://en.wikipedia.org/wiki/Triangulation) - any API for
+generating continuous shapes (cylinders, spheres) expects an explicit segments
+count.
+
+Previously I'd eyeball the segment count, or set it globally with
+[$fn](https://www.openscad.info/index.php/2020/06/05/fn-system-variable/). Neither is great since [$fn](https://www.openscad.info/index.php/2020/06/05/fn-system-variable/)
+applies the same segment count to every circular shape regardless of size, so
+small shapes end up overly dense.
+
+For manufacturing, often we actually care about tolerance (ε). i.e. the maximum
+permissible deviation of the triangulated model from its
+[SDF](https://en.wikipedia.org/wiki/Signed_distance_function)
+
+For a simple circle the math is pretty straight forward it also approximates
+sphere close enough. Then - using formula from above and clamping it to
+something reasonable we get:
 
 ```python
-from helpers import *
-
-offset = 18
-batt_rise = 3
-batt_x = 15
-batt_y = 7
-wall = 2
-
-def move_batt(m: Manifold) -> Manifold:
-    return m.rx(90).ty(offset + 4).tz(batt_y / 2 + batt_rise)
-
-def move_clone_studs(m: Manifold) -> Manifold:
-    return union(*(m.tx(offset).rz(i * 90) for i in range(4)))
-
-manifold = union(
-    move_clone_studs(cylinder(3, batt_rise)),
-    move_batt(round_rect(wall, batt_x + wall, batt_y + wall, 30)),
-    cube(batt_x + 2, 22, 2).ty(11),
-    round_rect(3, batt_x, 8, batt_rise).ty(2.5 - offset),
-).hull() - union(
-    move_clone_studs(hexagon(2, batt_y).tz(batt_rise - 1.5)),
-    move_clone_studs(cylinder(0.8, 5)),
-    move_batt(round_rect(1, batt_x, batt_y, 99)),
-    cube(7, 4, 99).ty(5 - offset), # UART Port
-    round_rect(1, batt_x + 2, 24, batt_rise - 0.4).ty(3),
-)
+def segments(radius: float) -> int:
+    tolerance = 0.05
+    n = math.pi / math.acos(1.0 - tolerance / radius)
+    return min(1024, max(8, math.ceil(n)))
 ```
 
-## Bonus - Auto tolerance
-
-<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
-  <msub>
-    <mi>n</mi>
-  </msub>
-  <mo>=</mo>
-  <mrow>
-    <mo>⌈</mo>
-    <mfrac>
-      <mi>π</mi>
-      <mrow>
-        <mi>arccos</mi>
-        <mrow>
-          <mo>(</mo>
-          <mn>1</mn>
-          <mo>−</mo>
-          <mfrac>
-            <mi>t</mi>
-            <mi>r</mi>
-          </mfrac>
-          <mo>)</mo>
-        </mrow>
-      </mrow>
-    </mfrac>
-    <mo>⌉</mo>
-  </mrow>
-</math>
+Then this function can be used as the default segments parameter
 
 ---
 

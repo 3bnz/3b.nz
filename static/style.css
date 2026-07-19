@@ -157,6 +157,11 @@ pre {
 	border-radius: 99px;?
 }
 
+p img + em {
+	color: var(--secondary);
+	font-size: 0.8em;
+}
+
 pre > code {
 	border: var(--border);
 	border-radius: var(--large);
